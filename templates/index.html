@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Socekt Example</title>
+</head>
+<body>
+    <center>
+        <form>
+            <table>
+                <header>Registration form using socket</header>
+                <hr style="width:25%">
+                <tr>
+                    <th>Name:</th>
+                    <td><input type="text" id="name" name="name" placeholder="abc" ></td>
+                </tr>
+                <tr>
+                    <th>Email:</th>
+                    <td><input type="mail" id="email" name="email" placeholder="abc@gmail.com" ></td>
+                </tr>
+                <tr>
+                    <th>Password:</th>
+                    <td><input type="password" id="password" name="password" placeholder="123" ></td>
+                </tr>
+                <tr id="insert">
+                    <th><input type="button" onclick="add_data()" value="Add Data" name="send"> </th>
+                </tr>
+                <tr id="update" style="display: none;">
+                    <input type="hidden" id="idno" value="">
+                    <th><input type="button" onclick="update_data()" value="Update Data" name="update"> </th>
+                    <td><input type="button" onclick="cancel_data()" value="Cancel" name="cancel"> </td>
+                </tr>
+            </table>
+        </form>
+        <br><br>
+        <table id="getdata" border="2px">
+            <header>Display Data</header>
+            <hr style="width: 75%;">
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Password</th>
+                <th colspan="2">Action</th>
+            </tr>
+        </table>
+    </center>
+</body>
+<script>
+    let socket = new WebSocket("ws://127.0.0.1:8000/api/");
+    socket.onopen = function(e) {
+        console.log("[open] Connection established");
+        console.log("Sending to server");
+
+        data = `{"connection":"opened"}`;
+        // console.log(data);
+        socket.send(data);
+        };
+
+
+    socket.onmessage = function(event) {
+        console.log(`[message] Data received from server: ${event.data}`);
+        data = JSON.parse(event.data);
+        // console.log(data.payload.response)
+        getdataid = document.getElementById("getdata");
+        getdataid.innerHTML = '';
+        if (data?.payload?.response) {
+            var html = '';            
+            data?.payload?.response.forEach(element => {
+                // console.log(element)
+                html += "<tr>";
+                html += "<td>"+element.id+"</td>";
+                html += "<td>"+element.name+"</td>";
+                html += "<td>"+element.email+"</td>";
+                html += "<td>"+element.password+"</td>";
+                html += `<td><input type='button' name='edit' onclick="fnEdit(`+element.id+`)" value='Edit'></td>`;
+                html += `<td><input type='button' name='delete' onclick="fnDelete(`+element.id+`)" value='Delete'></td>`;
+                html += "</tr>";
+                // console.log(html);
+            });
+        }
+        getdataid.innerHTML += html;
+        };
+
+    socket.onclose = function(event) {
+        if (event.wasClean) {
+            console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+        } else {
+            console.log('[close] Connection died');
+        }
+        };
+
+    socket.onerror = function(error) {
+        console.log(`[error] ${error.message}`);
+        };
+
+    function update_data(){
+        let id = document.getElementById("idno").value;
+        let name = document.getElementById("name").value;
+        let email = document.getElementById("email").value;
+        let password = document.getElementById("password").value;
+
+        data = `{"action":"update","id":"`+id+`","name":"`+name+`","email":"`+email+`","password":"`+password+`"}`;
+        // console.log(data);
+        socket.send(data);
+        name = document.getElementById("name").value= '';
+        email = document.getElementById("email").value= '';
+        password = document.getElementById("password").value= '';  
+        id = document.getElementById("idno").value = '';  
+        document.getElementById("insert").style = "display:block";
+        document.getElementById("update").style = "display:none";
+    }
+
+    function add_data(){
+        let name = document.getElementById("name").value;
+        let email = document.getElementById("email").value;
+        let password = document.getElementById("password").value;
+
+        data = `{"action":"insert","name":"`+name+`","email":"`+email+`","password":"`+password+`"}`;
+        // console.log(data);
+        socket.send(data);
+        name = document.getElementById("name").value= '';
+        email = document.getElementById("email").value= '';
+        password = document.getElementById("password").value= '';
+
+    }
+
+    function fnEdit (element){
+        geteditabledDAta = data?.payload?.response.find((item2) => item2.id === element);
+        console.log('index----------------',geteditabledDAta,element);
+        document.getElementById("idno").value = geteditabledDAta.id;
+        document.getElementById("name").value = geteditabledDAta.name;
+        document.getElementById("email").value = geteditabledDAta.email;
+        document.getElementById("password").value = geteditabledDAta.password;
+        document.getElementById("insert").style = "display:none";
+        document.getElementById("update").style = "display:block";
+    }
+    function fnDelete(element){
+        geteditabledDAta = data?.payload?.response.find((item2) => item2.id === element);
+        // console.log('index----------------',geteditabledDAta,element);
+        console.log(geteditabledDAta.id);
+        data = `{"action":"delete","id":`+ geteditabledDAta.id +`,"name":"`+geteditabledDAta.name+`","email":"`+geteditabledDAta.email+`","password":"`+geteditabledDAta.password+`"}`;
+        console.log(data);
+        socket.send(data);
+
+    }
+    function cancel_data(){
+        name = document.getElementById("name").value= '';
+        email = document.getElementById("email").value= '';
+        password = document.getElementById("password").value= '';  
+        id = document.getElementById("idno").value = '';  
+        document.getElementById("insert").style = "display:block";
+        document.getElementById("update").style = "display:none";
+    }
+
+</script>
+</html>
